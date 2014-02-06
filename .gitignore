@@ -1,0 +1,4 @@
+mytop
+*.o
+*.a
+*_tests
