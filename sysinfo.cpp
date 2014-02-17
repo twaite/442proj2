@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -187,19 +188,293 @@ vector<Cpu> get_cpu_info() {
 Process get_process(int pid, const char* basedir) {
 
 	Process process = Process();
-	string filename = string ( string ( PROC_ROOT ) + string ( pid ) + "/stat";
+	string filename = string ( string ( basedir ) + "/" + convertInt(pid) + "/stat" );
 	ifstream file ( filename.c_str() );
-	
+	long size, resident, share, trs, lrs, drs, dt;
+	int pidt, tgid;
+	string comm;
+	string command_line;
+	char state;
+	int ppid, pgrp, session, tty_nr, tpgid;
+	unsigned flags;
+	unsigned long minflt, cminflt, majflt, cmajflt, utime, stime;
+	long cutime, cstime, priority, nice, num_threads, itrealvalue;
+	unsigned long long starttime;
+	unsigned long vsize;
+	long rss;
+	unsigned long rsslim, startcode, endcode, startstack, kstkesp, 
+		kstkeip, signalt, blocked, sigignore, sigcatch, wchan, nswap, cnswap;
+	int exit_signal, processr;
+	unsigned rt_priority, policy;
+	unsigned long long delayacct_blkio_ticks;
+	unsigned long guest_time;
+	long cguest_time;
+	vector<Process> threads;
 
-  	return Process();
+	string junk;
+
+	// Read from stat file
+	if ( file.is_open() ) {
+
+		file >> pidt;
+		process.pid = pidt;
+
+		file >> comm;
+		strcpy(process.comm, comm.c_str());
+
+		file >> state;
+		process.state = state;
+
+		file >> ppid;
+		process.ppid = ppid;
+
+		file >> pgrp;
+		process.pgrp = pgrp;
+
+		file >> session;
+		process.session = session;
+
+		file >> tty_nr;
+		process.tty_nr = tty_nr;
+
+		file >> tpgid;
+		process.tpgid = tpgid;
+
+		file >> flags;
+		process.flags = flags;
+
+		file >> minflt;
+		process.minflt = minflt;
+
+		file >> cminflt;
+		process.cminflt = cminflt;
+
+		file >> majflt;
+		process.majflt = majflt;
+
+		file >> cmajflt;
+		process.cmajflt = cmajflt;
+
+		file >> utime;
+		process.utime = utime;
+
+		file >> stime;
+		process.stime = stime;
+
+		file >> cutime;
+		process.cutime = cutime;
+
+		file >> cstime;
+		process.cstime = cstime;
+
+		file >> priority;
+		process.priority = priority;
+
+		file >> nice;
+		process.nice = nice;
+
+		file >> num_threads;
+		process.num_threads = num_threads;
+
+		file >> itrealvalue;
+		process.itrealvalue = itrealvalue;
+
+		file >> starttime;
+		process.starttime = starttime;
+
+		file >> vsize;
+		process.vsize = vsize;
+
+		file >> rss;
+		process.rss = rss;
+
+		file >> rsslim;
+		process.rsslim = rsslim;
+
+		file >> startcode;
+		process.startcode = startcode;
+
+		file >> endcode;
+		process.endcode = endcode;
+
+		file >> startstack;
+		process.startstack = startstack;
+
+		file >> kstkesp;
+		process.kstkesp = kstkesp;
+
+		file >> kstkeip;
+		process. kstkeip = kstkeip;
+
+		file >> signalt;
+		process.signal = signalt;
+
+		file >> blocked;
+		process.blocked = blocked;
+
+		file >> sigignore;
+		process.sigignore = sigignore;
+
+		file >> sigcatch;
+		process.sigcatch = sigcatch;
+
+		file >> wchan;
+		process.wchan = wchan;
+
+		file >> nswap;
+		process.nswap = nswap;
+
+		file >> cnswap;
+		process.cnswap = cnswap;
+
+		file >> exit_signal;
+		process.exit_signal = exit_signal;
+
+		file >> processr;
+		process.processor = processr;
+
+		file >> rt_priority;
+		process.rt_priority = rt_priority;
+
+		file >> policy;
+		process.policy = policy;
+
+		file >> delayacct_blkio_ticks;
+		process.delayacct_blkio_ticks = delayacct_blkio_ticks;
+
+		file >> guest_time;
+		process.guest_time >> guest_time;
+
+		file >> cguest_time;
+		process.cguest_time = cguest_time;
+
+		file.close();
+
+	} else {
+
+		cerr << "Error opening stat for pid: " << pid  << endl;
+
+	}
+
+	filename = string ( string ( basedir ) + "/" + convertInt(pid) + "/statm" );
+	ifstream filem ( filename.c_str() );
+
+	if ( filem.is_open() ) {
+
+		filem >> process.size;
+		filem >> process.resident;
+		filem >> process.share;
+		filem >> process.trs;
+		filem >> process.lrs;
+		filem >> process.drs;
+		filem >> process.dt;
+
+		filem.close();
+
+	} else {
+
+		cerr << "Error opening statm for pid: " << pid << endl;
+
+	}
+
+	filename = string ( string ( basedir ) + "/" + convertInt(pid) + "/status" );
+	ifstream filestatus ( filename.c_str() );
+
+	if ( filestatus.is_open() ) {
+
+		for ( size_t i = 0; i < 6; i++ ) {
+
+			filestatus >> junk;
+
+		}
+
+		filestatus >> process.tgid;
+
+		filestatus.close();
+
+	} else {
+
+		cerr << "Error opening status for pid: " << pid << endl;
+
+	}
+
+	filename = string ( string ( basedir ) + "/" + convertInt(pid) + "/cmdline" );
+	ifstream cmdline ( filename.c_str() );
+
+	if ( cmdline.is_open() ) {
+
+		cmdline >> command_line;
+
+		int test = command_line.find("\0");
+
+		command_line.replace(test, 2, " ");
+
+		cout << command_line;
+
+		process.command_line = command_line;
+
+		cmdline.close();
+
+	} else {
+
+		cerr << "Error opening cmdline for pid: " << pid << endl;
+
+	}
+
+
+
+  	return process;
 }
 
 
 vector<Process> get_all_processes(const char* basedir) {
-  return vector<Process>();
+
+	vector<Process> processes = vector<Process>();
+	unsigned long num_processes;
+
+	string filename = string ( string (basedir)  + "/stat");
+	ifstream file ( filename.c_str() );
+
+	string temp;
+
+	if ( file.is_open() ) {
+
+		while ( !file.eof() ) {
+
+			file >> temp;
+
+			if ( temp == "processes" ) {
+				file >> num_processes;
+				break;
+			}
+
+		}
+
+		file.close();
+
+	} else {
+
+		cerr << "Error opening /proc/stat" << endl;
+
+	}
+
+	for ( size_t i = 0; i < num_processes; i++ ) {
+
+		processes.push_back(get_process(i, basedir));
+
+	}
+
+
+  	return processes;
 }
 
 
 SystemInfo get_system_info() {
   return SystemInfo();
+}
+
+string convertInt ( int number ) {
+	stringstream ss;
+	ss << number;
+	return ss.str();
 }

@@ -72,3 +72,6 @@ std::vector<Process> get_all_processes(const char* basedir);
  * about the system at a given point in time.
  */
 SystemInfo get_system_info();
+
+
+std::string convertInt ( int number );
